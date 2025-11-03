@@ -8,31 +8,38 @@ const getAuthHeaders = () => {
   };
 };
 
-export const addSlot = async (slotId) => {
+// Add Slot (requires lotId + slotId)
+export const addSlot = async (slotId, lotId) => {
   try {
+    console.log('API Call - Adding slot:', { slotId, lotId }); // DEBUG
+    
     const response = await fetch(`${API_BASE_URL}/admin/slots/add`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ slotId }),
+      body: JSON.stringify({ slotId, lotId }),
     });
 
+    const data = await response.json();
+    console.log('API Response:', data); // DEBUG
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to add slot');
+      throw new Error(data.message || 'Failed to add slot');
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
+    console.error('addSlot error:', error);
     throw error;
   }
 };
 
-export const deleteSlot = async (slotId) => {
+// Delete Slot (requires lotId + slotId)
+export const deleteSlot = async (slotId, lotId) => {
   try {
     const response = await fetch(`${API_BASE_URL}/admin/slots/delete`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ slotId }),
+      body: JSON.stringify({ slotId, lotId }),
     });
 
     if (!response.ok) {

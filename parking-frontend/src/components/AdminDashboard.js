@@ -1,13 +1,16 @@
+// src/components/AdminDashboard.js
 import React, { useState, useEffect } from "react";
 import AdminSlotManagement from "./AdminSlotManagement";
+import AdminLotManagement from "./AdminLotManagement"; // NEW
 import AdminAnalytics from "./AdminAnalytics";
 import { getAllUsers, getSystemStats } from "../api/authApi";
-import { getSlots } from "../api/parkingApi";
+import { getSlots, getAllParkingLots } from "../api/parkingApi"; // UPDATED
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({});
   const [slots, setSlots] = useState([]);
+  const [parkingLots, setParkingLots] = useState([]); // NEW
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,6 +19,7 @@ const AdminDashboard = () => {
     fetchUsers();
     fetchStats();
     fetchSlots();
+    fetchParkingLots(); // NEW
   }, []);
 
   const fetchUsers = async () => {
@@ -34,7 +38,7 @@ const AdminDashboard = () => {
       setStats(statsData);
     } catch (error) {
       console.error('Error fetching stats:', error);
-      setError('Failed to load statistics');
+      //setError('Failed to load statistics');
     } finally {
       setLoading(false);
     }
@@ -42,10 +46,20 @@ const AdminDashboard = () => {
 
   const fetchSlots = async () => {
     try {
-      const slotsData = await getSlots();
+      const slotsData = await getSlots(); // Get all slots
       setSlots(slotsData);
     } catch (error) {
       console.error('Error fetching slots:', error);
+    }
+  };
+
+  // NEW
+  const fetchParkingLots = async () => {
+    try {
+      const lotsData = await getAllParkingLots();
+      setParkingLots(lotsData);
+    } catch (error) {
+      console.error('Error fetching parking lots:', error);
     }
   };
 
@@ -62,19 +76,23 @@ const AdminDashboard = () => {
       <div className="stats-grid">
         <div className="stat-card">
           <h3>Total Users</h3>
-          <p className="stat-number">{stats.totalUsers || 0}</p>
+          <p className="stat-number">{stats.totalUsers || users.length}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Parking Lots</h3>
+          <p className="stat-number">{parkingLots.length}</p>
         </div>
         <div className="stat-card">
           <h3>Total Slots</h3>
-          <p className="stat-number">{stats.totalSlots || 0}</p>
+          <p className="stat-number">{stats.totalSlots || slots.length}</p>
         </div>
         <div className="stat-card">
           <h3>Occupied Slots</h3>
-          <p className="stat-number">{stats.occupiedSlots || 0}</p>
+          <p className="stat-number">{stats.occupiedSlots || slots.filter(s => s.action === 'occupied').length}</p>
         </div>
         <div className="stat-card">
           <h3>Available Slots</h3>
-          <p className="stat-number">{stats.availableSlots || 0}</p>
+          <p className="stat-number">{stats.availableSlots || slots.filter(s => s.action === 'free').length}</p>
         </div>
       </div>
 
@@ -86,16 +104,22 @@ const AdminDashboard = () => {
           Overview
         </button>
         <button
-          className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-          onClick={() => setActiveTab('analytics')}
+          className={`tab-btn ${activeTab === 'lots' ? 'active' : ''}`}
+          onClick={() => setActiveTab('lots')}
         >
-          Analytics & Reports
+          Parking Lots
         </button>
         <button
           className={`tab-btn ${activeTab === 'manage' ? 'active' : ''}`}
           onClick={() => setActiveTab('manage')}
         >
           Manage Slots
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          Analytics & Reports
         </button>
         <button
           className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
@@ -110,6 +134,38 @@ const AdminDashboard = () => {
           <div>
             <h2>Parking Overview</h2>
             <div className="overview-grid">
+              <div className="overview-card">
+                <h3>Parking Lots Summary</h3>
+                {parkingLots.length === 0 ? (
+                  <p>No parking lots yet. Go to "Parking Lots" tab to add one.</p>
+                ) : (
+                  <table className="simple-table">
+                    <thead>
+                      <tr>
+                        <th>Parking Lot</th>
+                        <th>Capacity</th>
+                        <th>Slots</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parkingLots.map(lot => {
+                        const lotSlots = slots.filter(s => s.lotId === lot.lotId);
+                        const occupied = lotSlots.filter(s => s.action === 'occupied').length;
+                        return (
+                          <tr key={lot.lotId}>
+                            <td>{lot.name}</td>
+                            <td>{lot.capacity}</td>
+                            <td>
+                              {occupied}/{lotSlots.length} occupied
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
               <div className="overview-card">
                 <h3>Current Slot Status</h3>
                 <table className="simple-table">
@@ -138,15 +194,19 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
-        
-        {activeTab === 'analytics' && (
-          <AdminAnalytics />
+
+        {activeTab === 'lots' && (
+          <AdminLotManagement />
         )}
         
         {activeTab === 'manage' && (
           <div>
             <AdminSlotManagement />
           </div>
+        )}
+        
+        {activeTab === 'analytics' && (
+          <AdminAnalytics />
         )}
         
         {activeTab === 'users' && (

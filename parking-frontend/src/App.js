@@ -1,3 +1,4 @@
+// src/App.js
 import React, { useState, useEffect } from "react";
 import SlotList from "./components/slotList";
 import LoginPage from "./components/LoginPage";
@@ -5,12 +6,14 @@ import AdminDashboard from "./components/AdminDashboard";
 import ContactPage from "./components/ContactPage";
 import AboutPage from "./components/AboutPage";
 import ProfilePage from "./components/ProfilePage";
+import SelectParkingLot from "./components/SelectParkingLot"; // NEW
 import "./App.css";
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState('home');
+  const [selectedParkingLot, setSelectedParkingLot] = useState(null); // NEW
 
   useEffect(() => {
     const savedUser = localStorage.getItem('parkingUser');
@@ -22,6 +25,17 @@ function App() {
         localStorage.removeItem('parkingUser');
       }
     }
+    
+    // Check if there's a saved parking lot selection
+    const savedLot = localStorage.getItem('selectedParkingLot');
+    if (savedLot) {
+      try {
+        setSelectedParkingLot(JSON.parse(savedLot));
+      } catch (error) {
+        localStorage.removeItem('selectedParkingLot');
+      }
+    }
+    
     setLoading(false);
   }, []);
 
@@ -33,7 +47,21 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
+    setSelectedParkingLot(null);
     localStorage.removeItem('parkingUser');
+    localStorage.removeItem('selectedParkingLot');
+    setCurrentPage('home');
+  };
+
+  const handleSelectParkingLot = (lot) => {
+    setSelectedParkingLot(lot);
+    localStorage.setItem('selectedParkingLot', JSON.stringify(lot));
+    setCurrentPage('slots');
+  };
+
+  const handleBackToLotSelection = () => {
+    setSelectedParkingLot(null);
+    localStorage.removeItem('selectedParkingLot');
     setCurrentPage('home');
   };
 
@@ -47,11 +75,20 @@ function App() {
     if (currentPage === 'profile') {
       return <ProfilePage user={user} />;
     }
+    if (currentPage === 'slots' && selectedParkingLot) {
+      return (
+        <SlotList 
+          selectedLot={selectedParkingLot} 
+          onBack={handleBackToLotSelection}
+        />
+      );
+    }
     
     // Home page
     if (user?.role === 'admin') {
       return <AdminDashboard />;
     } else {
+      // User sees parking lot selection first
       return (
         <>
           <h1>Parking Slot Reservation</h1>
@@ -59,7 +96,7 @@ function App() {
             <p>You can book one parking slot at a time.</p>
             <p>To book a different slot, please free your current slot first.</p>
           </div>
-          <SlotList />
+          <SelectParkingLot onSelectLot={handleSelectParkingLot} />
         </>
       );
     }
@@ -81,7 +118,11 @@ function App() {
         </h1>
         <div className="nav-links">
           <span className="welcome-text">Welcome, {user.name}!</span>
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }}>
+          <a href="#" onClick={(e) => { 
+            e.preventDefault(); 
+            setCurrentPage('home');
+            setSelectedParkingLot(null);
+          }}>
             {user.role === 'admin' ? 'Dashboard' : 'Home'}
           </a>
           <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('about'); }}>
@@ -102,7 +143,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>© 2025 Parking System | <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('contact'); }}>Contact Us</a></p>
+        <p>©️ 2025 Parking System | <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('contact'); }}>Contact Us</a></p>
       </footer>
     </div>
   );
